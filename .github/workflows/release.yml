@@ -1,14 +1,17 @@
+# Main is published: a push that changes the version in package.json
+# puts that version on npm and makes it a GitHub release.
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+    paths: [package.json]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v5
@@ -18,5 +21,14 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: npm publish
+      - id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if npm view "holon-md@$version" version >/dev/null 2>&1; then echo "published=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.version.outputs.published != 'true'
+        run: pnpm install --frozen-lockfile && npm publish
+      - if: steps.version.outputs.published != 'true'
+        run: gh release create "v${{ steps.version.outputs.version }}" --title "holon ${{ steps.version.outputs.version }}" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
