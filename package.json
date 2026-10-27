@@ -1,7 +1,23 @@
 {
   "name": "holon-md",
   "version": "0.1.0",
-  "description": "Compile a tree of small Markdown files into the documents people read.",
+  "description": "Compile a folder of small Markdown files into the documents people read.",
+  "keywords": [
+    "markdown",
+    "documentation",
+    "docs-as-code",
+    "readme",
+    "include",
+    "transclusion",
+    "single-source",
+    "compiler",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "Lukas Brückner",
+  "repository": "github:LukasB97/holon",
+  "homepage": "https://github.com/LukasB97/holon#readme",
+  "bugs": "https://github.com/LukasB97/holon/issues",
   "type": "module",
   "bin": {
     "holon": "dist/cli.js"
@@ -18,10 +34,12 @@
   "engines": {
     "node": ">=22.18"
   },
+  "packageManager": "pnpm@10.33.4",
   "scripts": {
     "build": "tsc",
     "test": "node --test test/holon.test.ts",
-    "docs": "node src/cli.ts docs ."
+    "docs": "node src/cli.ts docs .",
+    "prepublishOnly": "pnpm test && pnpm build"
   },
   "dependencies": {
     "mdast-util-from-markdown": "^2.1.0",

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -25,7 +25,7 @@ function write(files: Record<string, string>): string {
 
 async function run(files: Record<string, string>): Promise<Record<string, string>> {
   const dir = write(files);
-  const config = "holon.config.js" in files ? (await import(pathToFileURL(join(dir, "src", "holon.config.js")).href)).default : undefined;
+  const config = "holon.config.mjs" in files ? (await import(pathToFileURL(join(dir, "src", "holon.config.mjs")).href)).default : undefined;
   const artifacts = compile(join(dir, "src"), join(dir, "out"), config);
   return Object.fromEntries(artifacts.map((artifact) => [artifact.path, artifact.content]));
 }
@@ -36,7 +36,7 @@ async function fails(files: Record<string, string>, expected: RegExp): Promise<v
 
 test("projects children into the parent's file, one level below the call", async () => {
   const out = await run({
-    "holon.config.js": sections,
+    "holon.config.mjs": sections,
     "index.md": file("README.md", "# Product", "", "## Features", "", "`holon sections()`"),
     "billing.md": lines("## Billing", "", "Monthly invoices.", "", "#### Refunds", "", "Within 30 days.", ""),
     "login.md": lines("# Login", "", "Users sign in with email.", "", "## SSO", "", "Also via Google.", ""),
@@ -63,7 +63,7 @@ test("a function groups what it renders under headings of its own", async () => 
     "});",
   ].join("\n");
   const out = await run({
-    "holon.config.js": config,
+    "holon.config.mjs": config,
     "index.md": file("out.md", "# Docs", "", "```holon", "grouped()", "```"),
     "invoices.md": lines("# Invoices", "", "## Detail", ""),
     "refunds.md": lines("# Refunds", ""),
@@ -76,9 +76,9 @@ test("a function groups what it renders under headings of its own", async () => 
 
 test("a function needs a name a call can use", async () => {
   const index = file("out.md", '`holon "x"`');
-  await fails({ "holon.config.js": 'export default () => ({ "my-fn": () => "x" });', "index.md": index }, /"my-fn" cannot be the name of a function/);
-  await fails({ "holon.config.js": 'export default () => ({ class: () => "x" });', "index.md": index }, /"class" cannot be the name of a function/);
-  await fails({ "holon.config.js": 'export default () => ({ render: () => "x" });', "index.md": index }, /"render" is taken/);
+  await fails({ "holon.config.mjs": 'export default () => ({ "my-fn": () => "x" });', "index.md": index }, /"my-fn" cannot be the name of a function/);
+  await fails({ "holon.config.mjs": 'export default () => ({ class: () => "x" });', "index.md": index }, /"class" cannot be the name of a function/);
+  await fails({ "holon.config.mjs": 'export default () => ({ render: () => "x" });', "index.md": index }, /"render" is taken/);
 });
 
 test("refuses headings deeper than Markdown allows", async () => {
@@ -154,7 +154,7 @@ test("functions cannot change the shared nodes", async () => {
 
 test("links point to where their target landed", async () => {
   const out = await run({
-    "holon.config.js": sections,
+    "holon.config.mjs": sections,
     "index.md": file(
       "README.md",
       "# Docs",
@@ -205,7 +205,7 @@ test("a link needs a target that exists exactly once", async () => {
 
 test("a link finds a node's own heading, even when titles repeat", async () => {
   const out = await run({
-    "holon.config.js": sections,
+    "holon.config.mjs": sections,
     "index.md": file("out.md", "# Doc", "", "[second](./b.md)", "", "`holon sections()`"),
     "a.md": lines("# Setup", "", "first", ""),
     "b.md": lines("# Setup", "", "second", ""),
@@ -215,7 +215,7 @@ test("a link finds a node's own heading, even when titles repeat", async () => {
 
 test("a fragment names a heading of the node it belongs to", async () => {
   const out = await run({
-    "holon.config.js": sections,
+    "holon.config.mjs": sections,
     "index.md": file("out.md", "# Doc", "", "[b](./b.md#details)", "", "`holon sections()`"),
     "a.md": lines("# A", "", "## Details", ""),
     "b.md": lines("# B", "", "Jump to [details](#details).", "", "## Details", ""),
@@ -228,7 +228,7 @@ test("a fragment names a heading of the node it belongs to", async () => {
 
 test("reference links use the definitions of their own node", async () => {
   const out = await run({
-    "holon.config.js": sections,
+    "holon.config.mjs": sections,
     "index.md": file("out.md", "# Doc", "", "`holon sections()`"),
     "a.md": lines("# A", "", "See [the api][api].", "", "[api]: ./x.md 'X'", ""),
     "b.md": lines("# B", "", "See [api].", "", "[api]: ./y.md", ""),
@@ -248,7 +248,7 @@ test("reference links use the definitions of their own node", async () => {
 
 test("file names survive links and render_to", async () => {
   const out = await run({
-    "holon.config.js": sections,
+    "holon.config.mjs": sections,
     "index.md": file("out.md", "# Doc", "", "[sp](./sp%20ace.md) [h](./h.md)", "", "`holon sections()`"),
     "sp ace.md": "# Sp Ace\n",
     "h.md": file("a#b.md", "# Hash"),
@@ -295,10 +295,10 @@ test("a function may put a prefix in front of every line of a rendered text", as
     "});",
   ].join("\n");
   const c = lines("# C", "", "real c", "");
-  const quoted = await run({ "holon.config.js": config, "index.md": file("out.md", "# Doc", "", '`holon quote("./c.md")`'), "c.md": c });
+  const quoted = await run({ "holon.config.mjs": config, "index.md": file("out.md", "# Doc", "", '`holon quote("./c.md")`'), "c.md": c });
   assert.equal(quoted["out.md"], lines("# Doc", "", "> ## C", "> ", "> real c", ""));
   const indented = await run({
-    "holon.config.js": config,
+    "holon.config.mjs": config,
     "index.md": file("out.md", "# Doc", "", "- item", "", '`holon indent("./c.md")`'),
     "c.md": c,
   });
@@ -357,12 +357,10 @@ test("the CLI loads holon.config.mjs in a CommonJS package and names a config th
   assert.equal(ok.status, 0, ok.stderr);
   assert.equal(ok.stdout, "out.md\n");
   assert.equal(readFileSync(join(dir, "out", "out.md"), "utf8"), "hello\n");
-  writeFileSync(join(dir, "src", "holon.config.js"), "export default () => ({});\n");
-  assert.match(holon().stderr, /^holon: holon\.config\.js and holon\.config\.mjs both exist/m);
-  rmSync(join(dir, "src", "holon.config.mjs"));
+  writeFileSync(join(dir, "src", "holon.config.mjs"), "export default (;\n");
   const bad = holon();
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /^holon: holon\.config\.js: /m);
+  assert.match(bad.stderr, /^holon: holon\.config\.mjs: /m);
 });
 
 test("render_to must name distinct files inside the output folder", async () => {
@@ -382,9 +380,9 @@ test("no file may land inside the source folder", () => {
   assert.throws(() => compile(join(docs, "src"), docs), /inside the source folder/);
 });
 
-test("the essentials in docs/holon.config.js", async () => {
+test("the essentials in docs/holon.config.mjs", async () => {
   const out = await run({
-    "holon.config.js": readFileSync(new URL("../docs/holon.config.js", import.meta.url), "utf8"),
+    "holon.config.mjs": readFileSync(new URL("../docs/holon.config.mjs", import.meta.url), "utf8"),
     "index.md": file(
       "README.md",
       "# Docs",
@@ -412,7 +410,7 @@ test("the essentials in docs/holon.config.js", async () => {
 
 test("README.md is compiled from docs/", async () => {
   const root = fileURLToPath(new URL("..", import.meta.url));
-  const config = (await import("../docs/holon.config.js")).default;
+  const config = (await import("../docs/holon.config.mjs")).default;
   const [readme] = compile(join(root, "docs"), root, config);
   assert.equal(readme?.path, "README.md");
   assert.equal(readme.content, readFileSync(join(root, "README.md"), "utf8"));

@@ -17,7 +17,7 @@ import {
 } from "./markdown.ts";
 import { location, message, resolveLink, type Node, type Source, type Tree } from "./tree.ts";
 
-/** The default export of `holon.config.js`: called for every holon call with the node that contains it. */
+/** The default export of `holon.config.mjs`: called for every holon call with the node that contains it. */
 export type Config = (context: Context) => Record<string, (...args: any[]) => unknown>;
 export type Context = { node: Node; render: (node: Node) => string };
 
@@ -110,10 +110,10 @@ export function createRender(tree: Tree, config: Config | null) {
 
   function evaluate(expression: string, node: Node): string {
     const functions = config ? config({ node, render }) : {};
-    if (typeof functions !== "object" || functions === null) throw new Error("holon.config.js must return an object of functions");
+    if (typeof functions !== "object" || functions === null) throw new Error("holon.config.mjs must return an object of functions");
     for (const name of Object.keys(functions)) {
-      if (name === "node" || name === "render") throw new Error(`holon.config.js: "${name}" is taken`);
-      if (!usable(name)) throw new Error(`holon.config.js: "${name}" cannot be the name of a function`);
+      if (name === "node" || name === "render") throw new Error(`holon.config.mjs: "${name}" is taken`);
+      if (!usable(name)) throw new Error(`holon.config.mjs: "${name}" cannot be the name of a function`);
     }
     const scope = { ...functions, node, render };
     const run = new Function(...Object.keys(scope), `"use strict";\nreturn (\n${expression}\n);`);

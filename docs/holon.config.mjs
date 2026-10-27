@@ -1,4 +1,4 @@
-// The functions this README is built with. Copy what you need into your own holon.config.js.
+// The functions this README is built with. Copy what you need into your own holon.config.mjs.
 
 /** @type {import("holon-md").Config} */
 export default ({ node, render }) => {

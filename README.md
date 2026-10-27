@@ -12,7 +12,7 @@ A product described in three files:
 
 ```text
 docs/
-  holon.config.js
+  holon.config.mjs
   index.md
   billing.md
   login.md
@@ -31,7 +31,7 @@ render_to: README.md
 `holon sections()`
 ```
 
-`holon.config.js` defines what `sections` means:
+`holon.config.mjs` defines what `sections` means:
 
 ```js
 export default ({ node, render }) => ({
@@ -39,7 +39,23 @@ export default ({ node, render }) => ({
 });
 ```
 
-`billing.md` and `login.md` are plain Markdown, each starting with its own `#` heading. Holon writes one `README.md` in which both appear as sections under Features.
+`billing.md` and `login.md` are plain Markdown, each starting with its own `#` heading. Holon writes one `README.md`:
+
+```md
+# Product
+
+## Features
+
+### Billing
+
+...
+
+### Login
+
+...
+```
+
+An include would paste the two files in as they are. Holon moves their headings to where they now belong and keeps every link pointing where it pointed in the source, so a file reads right wherever it lands: as a section here, as a chapter of another document, or as a file of its own.
 
 The whole [language](#language) fits on one page.
 
@@ -79,7 +95,7 @@ node.children
 ```
 ````
 
-An expression sees `node`, the node whose text contains the call, `render`, and the functions from `holon.config.js`, or `holon.config.mjs`, in the source folder. That file exports one function. Holon calls it for every call with the same `node` and `render`, so the functions it returns know where they are used:
+An expression sees `node`, the node whose text contains the call, `render`, and the functions from `holon.config.mjs` in the source folder. That file exports one function. Holon calls it for every call with the same `node` and `render`, so the functions it returns know where they are used:
 
 ```js
 export default ({ node, render }) => ({
@@ -127,7 +143,7 @@ Every heading ends up exactly one level below the heading it belongs to, so gaps
 
 ## Essentials
 
-Holon ships no functions. The ones this README is built with are in [holon.config.js](docs/holon.config.js). Copy what you need:
+Holon ships no functions. The ones this README is built with are in [holon.config.mjs](docs/holon.config.mjs). Copy what you need:
 
 - `sections()` puts the children one after another, skipping those with their own file.
 - `ref(path)` links to a node with its title as the text.
@@ -139,7 +155,7 @@ Holon ships no functions. The ones this README is built with are in [holon.confi
 
 ```sh
 npm install --save-dev holon-md
-npx holon docs .
+npx holon-md docs .
 ```
 
 The first argument is the source folder, the second the output folder. Every file lands inside the output folder and none inside the source folder. Holon prints every file as it writes it and stops at the first error, saying where it happened.

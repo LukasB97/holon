@@ -16,7 +16,7 @@ node.children
 ```
 ````
 
-An expression sees `node`, the node whose text contains the call, `render`, and the functions from `holon.config.js`, or `holon.config.mjs`, in the source folder. That file exports one function. Holon calls it for every call with the same `node` and `render`, so the functions it returns know where they are used:
+An expression sees `node`, the node whose text contains the call, `render`, and the functions from `holon.config.mjs` in the source folder. That file exports one function. Holon calls it for every call with the same `node` and `render`, so the functions it returns know where they are used:
 
 ```js
 export default ({ node, render }) => ({
