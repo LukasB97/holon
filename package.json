@@ -15,7 +15,10 @@
   ],
   "license": "MIT",
   "author": "Lukas Brückner",
-  "repository": "github:LukasB97/holon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LukasB97/holon.git"
+  },
   "homepage": "https://github.com/LukasB97/holon#readme",
   "bugs": "https://github.com/LukasB97/holon/issues",
   "type": "module",
