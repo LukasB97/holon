@@ -1,0 +1,38 @@
+{
+  "name": "holon-md",
+  "version": "0.1.0",
+  "description": "Compile a tree of small Markdown files into the documents people read.",
+  "type": "module",
+  "bin": {
+    "holon": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test test/holon.test.ts",
+    "docs": "node src/cli.ts docs ."
+  },
+  "dependencies": {
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark": "^4.0.3",
+    "micromark-extension-gfm": "^3.0.0",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2"
+  }
+}

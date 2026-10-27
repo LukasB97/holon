@@ -1,0 +1,9 @@
+---
+render_to: README.md
+---
+
+# Holon
+
+Holon compiles a folder of small Markdown files into the documents people read.
+
+`holon sections()`
