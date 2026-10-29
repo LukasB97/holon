@@ -10,10 +10,11 @@ export type Node = {
   path: string;
   /** The front matter. */
   meta: Record<string, unknown>;
-  /** Text of the first heading as written, or null. */
+  /** The `title` from the front matter, or null. */
   title: string | null;
   /** Output path from `render_to`, or null. */
   artifact: string | null;
+  /** The nodes in a folder, by name. Parts are not among them. */
   children: readonly Node[];
   /** Nodes whose text links to this node. */
   backlinks: readonly Node[];
@@ -35,6 +36,7 @@ export type Source = {
   line: number;
 };
 
+/** `nodes` holds every node, parts included, each folder before what is in it. */
 export type Tree = { dir: string; root: Node; nodes: Map<string, Node>; sources: Map<Node, Source> };
 
 /** A link target in source terms, or null for links Holon leaves alone. */
@@ -42,12 +44,17 @@ export type Target = { path: string; fragment: string | null; node: Node | null 
 
 export function loadTree(dir: string): Tree {
   const tree: Tree = { dir, root: undefined!, nodes: new Map(), sources: new Map() };
-  tree.root = loadFolder(tree, "/") ?? loadNode(tree, "/", null, "/", []);
-  for (const node of preorder(tree.root)) {
-    const source = tree.sources.get(node)!;
+  const loaded = loadFolder(tree, "/");
+  if (loaded[0]?.node.path !== "/") loaded.unshift(loadNode(tree, "/", null, "/", []));
+  for (const source of loaded) {
+    tree.nodes.set(source.node.path, source.node);
+    tree.sources.set(source.node, source);
+  }
+  tree.root = loaded[0]!.node;
+  for (const source of loaded) {
     for (const { url, start } of destinations(source.body, source.root)) {
       const target = resolveLink(tree, url, source, location(source, start))?.node;
-      if (target && target !== node && !target.backlinks.includes(node)) (target.backlinks as Node[]).push(node);
+      if (target && target !== source.node && !target.backlinks.includes(source.node)) (target.backlinks as Node[]).push(source.node);
     }
   }
   // Functions share these nodes, so nobody may change them.
@@ -67,8 +74,9 @@ function freeze(value: unknown): void {
   for (const inner of Object.values(value as object)) freeze(inner);
 }
 
-export function preorder(node: Node): Node[] {
-  return [node, ...node.children.flatMap(preorder)];
+/** Whether the node at `path` is a part: a name on the way to it starts with `_`. */
+export function isPart(path: string): boolean {
+  return path.split("/").some((name) => name.startsWith("_"));
 }
 
 export function location(source: Source, offset: number): string {
@@ -116,37 +124,51 @@ function decode(path: string): string {
   }
 }
 
-function loadFolder(tree: Tree, path: string): Node | null {
+/**
+ * The folder at `path` and everything in it, each folder before its contents.
+ * A folder with no index.md and no children is no node, but what is in it stays.
+ */
+function loadFolder(tree: Tree, path: string): Source[] {
   const entries = readdirSync(join(tree.dir, path), { withFileTypes: true })
     .filter((entry) => !entry.name.startsWith("."))
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const inside: Source[] = [];
   const children: Node[] = [];
   let index: string | null = null;
   for (const entry of entries) {
-    const childPath = path === "/" ? `/${entry.name}` : `${path}/${entry.name}`;
-    if (entry.isDirectory()) {
-      const child = loadFolder(tree, childPath);
-      if (child) children.push(child);
-    } else if (entry.name === "index.md") {
-      index = childPath;
-    } else if (entry.name.endsWith(".md")) {
-      children.push(loadNode(tree, childPath, childPath, path, []));
-    }
+    const entryPath = path === "/" ? `/${entry.name}` : `${path}/${entry.name}`;
+    let found: Source[];
+    if (entry.isDirectory()) found = loadFolder(tree, entryPath);
+    else if (entry.name === "index.md") {
+      index = entryPath;
+      continue;
+    } else if (entry.name.endsWith(".md")) found = [loadNode(tree, entryPath, entryPath, path, [])];
+    else continue;
+    inside.push(...found);
+    if (found[0]?.node.path === entryPath && !entry.name.startsWith("_")) children.push(found[0].node);
   }
-  if (!index && children.length === 0) return null;
-  return loadNode(tree, path, index, path, children);
+  if (!index && children.length === 0) return inside;
+  return [loadNode(tree, path, index, path, children), ...inside];
 }
 
-function loadNode(tree: Tree, path: string, file: string | null, dir: string, children: Node[]): Node {
+function loadNode(tree: Tree, path: string, file: string | null, dir: string, children: Node[]): Source {
   const text = file ? readFileSync(join(tree.dir, file), "utf8").replace(/^﻿/, "").replace(/\r\n?/g, "\n") : "";
   const { meta, body, line } = splitFrontMatter(text, file);
   const root = parse(body);
+  const title = titleOf(meta, file);
   const first = headings(root)[0];
+  if (title === null) {
+    if (file && !isPart(path)) throw new Error(`${file}: no title in the front matter; every file needs one, unless its name starts with _`);
+  } else if (first && plainText(first).trim() === plainText(parse(title)).trim()) {
+    throw new Error(`${file}: the heading "${title}" repeats the title; Holon writes the title above the text`);
+  }
+  const artifact = renderTo(meta, file);
+  if (artifact !== null && isPart(path)) throw new Error(`${file}: a part cannot have render_to; it appears only where a function renders it`);
   const node: Node = {
     path,
     meta,
-    title: first ? plainText(first).trim() : null,
-    artifact: renderTo(meta, file),
+    title,
+    artifact,
     children,
     backlinks: [],
     at: (target) => {
@@ -155,9 +177,7 @@ function loadNode(tree: Tree, path: string, file: string | null, dir: string, ch
       return found;
     },
   };
-  tree.nodes.set(path, node);
-  tree.sources.set(node, { node, file, dir, body, root, line });
-  return node;
+  return { node, file, dir, body, root, line };
 }
 
 function splitFrontMatter(text: string, file: string | null): { meta: Record<string, unknown>; body: string; line: number } {
@@ -171,6 +191,14 @@ function splitFrontMatter(text: string, file: string | null): { meta: Record<str
   }
   if (typeof meta !== "object" || Array.isArray(meta)) throw new Error(`${file}: front matter must be a mapping`);
   return { meta: meta as Record<string, unknown>, body: text.slice(match[0].length), line: match[0].split("\n").length };
+}
+
+function titleOf(meta: Record<string, unknown>, file: string | null): string | null {
+  const value = meta.title;
+  if (value === undefined || value === null) return null;
+  const title = typeof value === "string" ? value.trim() : "";
+  if (title === "" || /[\r\n]/.test(title)) throw new Error(`${file}: title must be one line of text`);
+  return title;
 }
 
 function renderTo(meta: Record<string, unknown>, file: string | null): string | null {

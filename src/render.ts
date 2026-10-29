@@ -58,21 +58,28 @@ export function createRender(tree: Tree, config: Config | null) {
   }
 
   function renderSource(source: Source): string {
+    const { title } = source.node;
+    // The title is the heading at level 1, so the headings of the text are sections at level 2.
+    const top = title === null ? 1 : 2;
     const list = headings(source.root);
-    const depths = levels(list, 1);
+    let depths: number[];
     let edits: Edit[];
     try {
+      depths = levels(list, top);
       edits = list.flatMap((heading, i) => levelEdit(heading, depths[i]!) ?? []);
     } catch (error) {
       throw new Error(`${source.file}: ${message(error)}`);
     }
     edits.push(...referenceEdits(source.body, source.root));
-    for (const call of findCalls(source, list, depths)) {
+    for (const call of findCalls(source, list, depths, top - 1)) {
       const text = expand(call, source);
       // An empty result leaves no block behind.
       edits.push(call.block && text === "" ? removeLines(source.body, call.start, call.end) : { start: call.start, end: call.end, text });
     }
-    return mark(source.node, linkToSources(applyEdits(source.body, edits), source));
+    // The marker lines stand on lines of their own, so blank lines around the text go.
+    const text = applyEdits(source.body, edits).replace(/^(?:[ \t]*\n)+/, "").trimEnd();
+    const whole = title === null ? text : text === "" ? `# ${title}` : `# ${title}\n\n${text}`;
+    return mark(source.node, linkToSources(whole, source));
   }
 
   function expand(call: Call, source: Source): string {
@@ -133,12 +140,11 @@ export function createRender(tree: Tree, config: Config | null) {
     return applyEdits(text, edits);
   }
 
-  /** Wrap a node's text in marker lines. They stand on lines of their own, so blank lines around the text go. Empty text gets no markers. */
+  /** Wrap a node's text in marker lines. They stand on lines of their own. Empty text gets no markers. */
   function mark(node: Node, text: string): string {
-    const body = text.replace(/^(?:[ \t]*\n)+/, "").trimEnd();
-    if (body === "") return "";
+    if (text === "") return "";
     const path = encodeURI(node.path);
-    return `<!-- holon ${id} start ${path} -->\n${body}\n<!-- holon ${id} end ${path} -->`;
+    return `<!-- holon ${id} start ${path} -->\n${text}\n<!-- holon ${id} end ${path} -->`;
   }
 
   /**
@@ -172,7 +178,12 @@ export function createRender(tree: Tree, config: Config | null) {
     return { regions, removals };
   }
 
-  return { render, markers };
+  /** The text `render(node)` produced, or undefined if it has not run. */
+  function rendered(node: Node): string | undefined {
+    return done.get(node);
+  }
+
+  return { render, markers, rendered };
 }
 
 function cutApart(path: string): Error {
@@ -201,7 +212,8 @@ function usable(name: string): boolean {
   }
 }
 
-function findCalls(source: Source, list: Heading[], depths: number[]): Call[] {
+/** The calls in `source`. `above` is the level of the title the text sits under, 0 without one. */
+function findCalls(source: Source, list: Heading[], depths: number[], above: number): Call[] {
   const calls: Call[] = [];
   walk(source.root, (node, ancestors) => {
     const expression = holonExpression(node, source);
@@ -216,7 +228,7 @@ function findCalls(source: Source, list: Heading[], depths: number[]): Call[] {
       block = parent?.type === "paragraph" && parent.children.length === 1 && ancestors[ancestors.length - 2]?.type === "root";
     }
     // The call sits below the last heading before it, at that heading's level in the finished text.
-    const level = levelBefore(list, depths, start(node), 0);
+    const level = levelBefore(list, depths, start(node), above);
     calls.push({ expression, start: start(node), end: end(node), block, level, where });
   });
   return calls;

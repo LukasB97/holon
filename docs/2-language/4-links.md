@@ -1,12 +1,11 @@
 ---
+title: Links
 summary: Where links point after compiling.
 ---
 
-# Links
-
 A link points to the same target in the output as in the source. Write it relative to its file, or from the source folder with a leading `/`. A link that a function writes resolves like a link in the node that contains the call.
 
-- A link to a node points to where the node landed. That is its own file if it has `render_to`. Otherwise it is the file its text ended up in, at the node's own first heading. The text must be in exactly one place. Text that a function rendered and then dropped does not count.
+- A link to a node points to where the node landed. That is its own file if it has `render_to`. Otherwise it is the file its text ended up in, at the node's title or, for a part without one, its first heading. The text must be in exactly one place. Text that a function rendered and then dropped does not count.
 - A link to any other file points to that file in the source folder. Holon copies nothing.
 - A link to a `.md` file that is not a node is an error.
 

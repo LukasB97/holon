@@ -1,8 +1,7 @@
 ---
+title: Usage
 summary: Install and run.
 ---
-
-# Usage
 
 ```sh
 npm install --save-dev holon-md
