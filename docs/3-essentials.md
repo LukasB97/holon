@@ -10,3 +10,4 @@ Holon ships no functions. The ones this README is built with are in [holon.confi
 - `file(path)` prints the output path of a node with its own file.
 - `backlinks()` lists the nodes that link here.
 - `tree(path)` draws the folder below a path with each node's `summary`.
+- `table(...fields)` draws the children as a table: a link to each, and a column per front matter field.

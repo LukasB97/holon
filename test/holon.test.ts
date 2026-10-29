@@ -458,6 +458,8 @@ test("the essentials in docs/holon.config.mjs", async () => {
       "",
       "`holon tree()`",
       "",
+      '`holon table("summary")`',
+      "",
       "`holon sections()`",
     ),
     "guide.md": lines("---", "title: Guide", "summary: How to start.", "---", "", "Read [the API](./api.md).", ""),
@@ -469,6 +471,7 @@ test("the essentials in docs/holon.config.mjs", async () => {
     lines(
       "# Docs", "", "See [Guide](#guide), file `api.md`.", "",
       "```yaml", "/:", "  api.md: # Reference.", "  guide.md: # How to start.", "  more:", "    deep.md:", "```", "",
+      "|  | summary |", "| :-- | :-- |", "| [API](api.md) | Reference. |", "| [Guide](#guide) | How to start. |", "| more |  |", "",
       "## Guide", "", "Read [the API](api.md).", "", "## Deep", "",
     ),
   );

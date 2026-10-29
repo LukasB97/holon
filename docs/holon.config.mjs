@@ -43,5 +43,17 @@ export default ({ node, render }) => {
       visit(node.at(path), 0);
       return ["```yaml", ...lines, "```"].join("\n");
     },
+
+    // The children as a table: a link to each, and a column per field of their front matter.
+    // The facts stay in the children, so a child that gets a file gets a row.
+    table: (...fields) => {
+      const row = (cells) => `| ${cells.join(" | ")} |`;
+      const name = (child) => (child.title ? `[${child.title}](${child.path})` : child.path.split("/").pop());
+      return [
+        row(["", ...fields]),
+        row(["", ...fields].map(() => ":--")),
+        ...node.children.map((child) => row([name(child), ...fields.map((field) => child.meta[field] ?? "")])),
+      ].join("\n");
+    },
   };
 };
