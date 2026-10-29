@@ -1,6 +1,6 @@
 {
   "name": "holon-md",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Compile a folder of small Markdown files into the documents people read.",
   "keywords": [
     "markdown",

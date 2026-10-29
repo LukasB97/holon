@@ -1,8 +1,7 @@
 ---
+title: The idea
 summary: Why the files you write and the files you read should differ.
 ---
-
-# The idea
 
 In a folder of Markdown files, the file you maintain is the file someone reads. The two jobs pull in different directions. Maintaining wants small files that each hold one thing in one place. Reading wants a few complete documents, shaped for whoever opens them.
 
@@ -18,15 +17,15 @@ docs/
   login.md
 ```
 
-`index.md` says where it goes and pulls in its children:
+`index.md` names the document, says where it goes and pulls in its children:
 
 ```md
 ---
+title: Product
 render_to: README.md
 ---
-# Product
 
-## Features
+# Features
 
 `holon sections()`
 ```
@@ -39,7 +38,7 @@ export default ({ node, render }) => ({
 });
 ```
 
-`billing.md` and `login.md` are plain Markdown, each starting with its own `#` heading. Holon writes one `README.md`:
+`billing.md` and `login.md` are plain Markdown, each with a `title` in its front matter. Holon writes one `README.md`:
 
 ```md
 # Product
@@ -55,6 +54,6 @@ export default ({ node, render }) => ({
 ...
 ```
 
-An include would paste the two files in as they are. Holon moves their headings to where they now belong and keeps every link pointing where it pointed in the source, so a file reads right wherever it lands: as a section here, as a chapter of another document, or as a file of its own.
+An include would paste the two files in as they are. Holon writes each title as a heading, moves the headings below it to where they now belong and keeps every link pointing where it pointed in the source, so a file reads right wherever it lands: as a section here, as a chapter of another document, or as a file of its own.
 
 The whole [language](./2-language/index.md) fits on one page.

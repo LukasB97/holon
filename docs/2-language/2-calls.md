@@ -1,8 +1,7 @@
 ---
+title: Calls
 summary: Code that runs.
 ---
-
-# Calls
 
 Code that starts with the word `holon` is a call. Holon evaluates the rest as a JavaScript expression and puts the resulting string in its place. A code span is a call on one line, a code block tagged `holon` is a call on several:
 

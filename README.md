@@ -18,15 +18,15 @@ docs/
   login.md
 ```
 
-`index.md` says where it goes and pulls in its children:
+`index.md` names the document, says where it goes and pulls in its children:
 
 ```md
 ---
+title: Product
 render_to: README.md
 ---
-# Product
 
-## Features
+# Features
 
 `holon sections()`
 ```
@@ -39,7 +39,7 @@ export default ({ node, render }) => ({
 });
 ```
 
-`billing.md` and `login.md` are plain Markdown, each starting with its own `#` heading. Holon writes one `README.md`:
+`billing.md` and `login.md` are plain Markdown, each with a `title` in its front matter. Holon writes one `README.md`:
 
 ```md
 # Product
@@ -55,17 +55,17 @@ export default ({ node, render }) => ({
 ...
 ```
 
-An include would paste the two files in as they are. Holon moves their headings to where they now belong and keeps every link pointing where it pointed in the source, so a file reads right wherever it lands: as a section here, as a chapter of another document, or as a file of its own.
+An include would paste the two files in as they are. Holon writes each title as a heading, moves the headings below it to where they now belong and keeps every link pointing where it pointed in the source, so a file reads right wherever it lands: as a section here, as a chapter of another document, or as a file of its own.
 
 The whole [language](#language) fits on one page.
 
 ## Language
 
-A source folder is GitHub Flavored Markdown with front matter. Holon gives meaning to four things in it: code that starts with `holon`, the front matter field `render_to`, links, and heading levels. Everything else passes through as written.
+A source folder is GitHub Flavored Markdown with front matter. Holon gives meaning to five things in it: code that starts with `holon`, the front matter fields `title` and `render_to`, names that start with `_` or `.`, links, and heading levels. Everything else passes through as written.
 
 ### Nodes
 
-Every folder and every `.md` file in the source folder is a node. A folder's `index.md` holds the folder's own text, so from outside a folder looks like a file. Names starting with `.` are skipped, and so are folders without Markdown.
+Every folder and every `.md` file in the source folder is a node. A folder's `index.md` holds the folder's own text, so from outside a folder looks like a file. Names starting with `.` are skipped, and so are folders with no `index.md` and no children.
 
 A node is plain data:
 
@@ -73,13 +73,15 @@ A node is plain data:
 | :-- | :-- |
 | `path` | Path from the source folder: `/guides/setup.md`, or `/guides` for a folder |
 | `meta` | The front matter |
-| `title` | The text of the first heading as written, or `null` |
-| `children` | The child nodes, sorted by name |
+| `title` | The `title` from the front matter, or `null` |
+| `children` | The child nodes, sorted by name. Parts are not among them |
 | `artifact` | The node's own output file from `render_to`, or `null` |
 | `backlinks` | The nodes whose text links to this node |
 | `at(path)` | The node at a path relative to this node's file, or from the source folder with a leading `/` |
 
-Front matter other than `render_to` means nothing to Holon. It is there for your functions to read.
+The title names the node. Every node with text has one, unless it is a part. A name starting with `_` makes a node and everything inside it a part: a piece of text that belongs to the places that use it, not to the tree. The node is not among its folder's `children`, so a function that walks the tree never meets it. `at()` finds it, and it appears only where a function renders it. A part has no `render_to`, and a part that no function renders is an error, so no text lies around unused.
+
+Front matter other than `title` and `render_to` means nothing to Holon. It is there for your functions to read.
 
 ### Calls
 
@@ -117,13 +119,13 @@ A node with `render_to` in its front matter becomes a file at that path inside t
 render_to: guides/setup.md
 ```
 
-Holon renders these nodes and nothing else. Every other node appears only where a function renders it, which can be several places or none.
+Holon renders these nodes and nothing else. Every other node appears only where a function renders it, which can be several places or none. A part cannot have `render_to`.
 
 ### Links
 
 A link points to the same target in the output as in the source. Write it relative to its file, or from the source folder with a leading `/`. A link that a function writes resolves like a link in the node that contains the call.
 
-- A link to a node points to where the node landed. That is its own file if it has `render_to`. Otherwise it is the file its text ended up in, at the node's own first heading. The text must be in exactly one place. Text that a function rendered and then dropped does not count.
+- A link to a node points to where the node landed. That is its own file if it has `render_to`. Otherwise it is the file its text ended up in, at the node's title or, for a part without one, its first heading. The text must be in exactly one place. Text that a function rendered and then dropped does not count.
 - A link to any other file points to that file in the source folder. Holon copies nothing.
 - A link to a `.md` file that is not a node is an error.
 
@@ -133,13 +135,13 @@ The links in a node's text are the [backlinks](#nodes) of their targets. Links t
 
 ### Headings
 
-Write every file as if it stood alone, starting at `#`. A heading underlined with `===` or `---` is an error. Holon fits the levels together with one rule: text put into other text starts one level below the last heading that other text wrote above it.
+A node's title is its heading. Holon writes it above the text when it renders the node, so the text never contains it, and a text whose first heading repeats the title is an error. Every heading in the text is a section of the node, one level below the title. Write them as if the file stood alone, and Holon fits the levels together with one rule: text put into other text starts one level below the last heading that other text wrote above it.
 
-- `render(node)` returns the node with its top headings at level one.
+- `render(node)` returns the node with its title at level one and the top headings of its text at level two. A part without a title starts with its text, at level one.
 - A call's result starts one level below the heading above the call.
 - What a function got from `render()` starts one level below the heading the function wrote above it, so a function can group what it renders under headings of its own.
 
-Every heading ends up exactly one level below the heading it belongs to, so gaps close: a file using only `##` and `####` comes out as `#` and `##`. Markdown has six levels. Nesting deeper is an error.
+Every heading ends up exactly one level below the heading it belongs to, so gaps close: a text with headings at `##` and `####` comes out the same as one with `#` and `##`. A heading underlined with `===` or `---` is an error. Markdown has six levels. Nesting deeper is an error.
 
 ## Essentials
 

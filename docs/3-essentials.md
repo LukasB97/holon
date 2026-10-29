@@ -1,8 +1,7 @@
 ---
+title: Essentials
 summary: Functions worth copying.
 ---
-
-# Essentials
 
 Holon ships no functions. The ones this README is built with are in [holon.config.mjs](./holon.config.mjs). Copy what you need:
 

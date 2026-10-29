@@ -1,7 +1,7 @@
 import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { anchors, applyEdits, destinations, formatUrl, headings, parse, start, type Edit } from "./markdown.ts";
 import { contains, createRender, type Config, type Region } from "./render.ts";
-import { loadTree, message, preorder, resolveLink, type Node } from "./tree.ts";
+import { isPart, loadTree, message, resolveLink, type Node } from "./tree.ts";
 
 /** A file to write: its path inside the output folder and its content. */
 export type Artifact = { path: string; content: string };
@@ -14,9 +14,9 @@ export function compile(sourceDir: string, outputDir: string, config?: Config): 
   const source = resolve(sourceDir);
   const output = resolve(outputDir);
   const tree = loadTree(source);
-  const { render, markers } = createRender(tree, config ?? null);
+  const { render, markers, rendered } = createRender(tree, config ?? null);
   const files = new Map<string, Node>();
-  for (const node of preorder(tree.root)) {
+  for (const node of tree.nodes.values()) {
     if (!node.artifact) continue;
     const other = files.get(node.artifact);
     if (other) throw new Error(`${other.path} and ${node.path} both render_to ${node.artifact}`);
@@ -29,6 +29,10 @@ export function compile(sourceDir: string, outputDir: string, config?: Config): 
 
   const texts = new Map<string, string>();
   for (const [path, node] of files) texts.set(path, render(node));
+  // A part exists to be rendered somewhere, so one that nobody renders is text lying around unused.
+  for (const [node, { file }] of tree.sources) {
+    if (file && isPart(node.path) && !rendered(node)) throw new Error(`${file} is a part that no function renders`);
+  }
 
   // Read from the markers where each node's text ended up and which headings are its own.
   const places = new Map<string, Place[]>();

@@ -17,7 +17,7 @@ export default ({ node, render }) => {
     // A link with the target's title as its text.
     ref: (path) => {
       const target = node.at(path);
-      if (!target.title) throw new Error(`${target.path} has no heading`);
+      if (!target.title) throw new Error(`${target.path} has no title`);
       return `[${target.title}](${target.path})`;
     },
 
