@@ -28,8 +28,12 @@ export default ({ node, render }) => {
       return "`" + target.artifact + "`";
     },
 
-    // The nodes that link here.
-    backlinks: () => node.backlinks.map((source) => `- [${source.title}](${source.path})`).join("\n"),
+    // The nodes that link here, by title. Parts without a title stay out.
+    backlinks: () =>
+      node.backlinks
+        .filter((source) => source.title)
+        .map((source) => `- [${source.title}](${source.path})`)
+        .join("\n"),
 
     // The folder below a path, with each node's summary.
     tree: (path = ".") => {
@@ -44,15 +48,16 @@ export default ({ node, render }) => {
       return ["```yaml", ...lines, "```"].join("\n");
     },
 
-    // The children as a table: a link to each, and a column per field of their front matter.
+    // The children as a table: a link to each child with a title, and a column per field of their front matter.
     // The facts stay in the children, so a child that gets a file gets a row.
     table: (...fields) => {
+      const cell = (value) => String(value ?? "").replace(/\s+/g, " ").trim().replace(/\|/g, "\\|");
       const row = (cells) => `| ${cells.join(" | ")} |`;
-      const name = (child) => (child.title ? `[${child.title}](${child.path})` : child.path.split("/").pop());
+      const name = (child) => (child.title ? `[${cell(child.title)}](${child.path})` : child.path.split("/").pop());
       return [
         row(["", ...fields]),
         row(["", ...fields].map(() => ":--")),
-        ...node.children.map((child) => row([name(child), ...fields.map((field) => child.meta[field] ?? "")])),
+        ...node.children.map((child) => row([name(child), ...fields.map((field) => cell(child.meta[field]))])),
       ].join("\n");
     },
   };

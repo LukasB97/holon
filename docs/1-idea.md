@@ -60,8 +60,8 @@ An include would paste the two files in as they are. Holon writes each title as 
 
 The tree holds every fact once, in the node the fact is about. The name of a feature is the `title` of its file, its one-line description is a `summary` in the front matter of that file, and the text that explains it is that file. A document never restates a fact. It calls a function, and the function reads the fact from where it lives.
 
-A table of all features is therefore not a list of rows in the front matter of the document that shows it. It is a function over `node.children` that reads each child's `summary`, so a feature that gets a file gets a row, and a summary that changes changes everywhere it appears. The test is simple: if the front matter of one file describes other files, the facts are in the wrong file. Move each one to the node it is about, and write a function.
+A table of all features is therefore not a list of rows in the front matter of the document that shows it. It is a function over `node.children` that reads each child's `summary`, so a feature that gets a file gets a row, and a summary that changes changes everywhere it appears. The links in such a table point to where the children landed, so the table belongs in a document that also renders them, or the children get files of their own. The test is simple: if the front matter of one file describes other files, the facts are in the wrong file. Move each one to the node it is about, and write a function.
 
-The same holds for text. A paragraph that two documents share is a part, a file with a name starting in `_` that both render, and Holon checks that it is rendered somewhere. Nothing is written twice, and nothing lies around unused.
+The same holds for text. A paragraph that two documents share is a part, a file with a name starting in `_` that both render, and Holon checks that it lands in a document. Nothing needs to be written twice, and no part lies around unused.
 
 The whole [language](./2-language/index.md) fits on one page.

@@ -29,10 +29,6 @@ export function compile(sourceDir: string, outputDir: string, config?: Config): 
 
   const texts = new Map<string, string>();
   for (const [path, node] of files) texts.set(path, render(node));
-  // A part exists to be rendered somewhere, so one that nobody renders is text lying around unused.
-  for (const [node, { file }] of tree.sources) {
-    if (file && isPart(node.path) && !rendered(node)) throw new Error(`${file} is a part that no function renders`);
-  }
 
   // Read from the markers where each node's text ended up and which headings are its own.
   const places = new Map<string, Place[]>();
@@ -54,6 +50,14 @@ export function compile(sourceDir: string, outputDir: string, config?: Config): 
       places.set(region.path, [...(places.get(region.path) ?? []), place]);
     }
     marked.set(file, found);
+  }
+
+  // A part exists to land in a file, so one whose text is in none is text lying around unused.
+  for (const [node, { file }] of tree.sources) {
+    if (!file || !isPart(node.path)) continue;
+    const text = rendered(node);
+    if (text === undefined) throw new Error(`${file} is a part that no function renders`);
+    if (text !== "" && !places.has(node.path)) throw new Error(`${file} is a part whose text is in no file`);
   }
 
   /** The file a node's text is in, and the anchors of its headings there. */

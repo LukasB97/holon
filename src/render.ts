@@ -178,9 +178,9 @@ export function createRender(tree: Tree, config: Config | null) {
     return { regions, removals };
   }
 
-  /** Whether `render(node)` has run. */
-  function rendered(node: Node): boolean {
-    return done.has(node);
+  /** The text `render(node)` produced, or undefined if it has not run. */
+  function rendered(node: Node): string | undefined {
+    return done.get(node);
   }
 
   return { render, markers, rendered };

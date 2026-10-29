@@ -61,13 +61,18 @@ test("the title is the heading, the headings of the text are sections below it",
   const alone = await run({ "index.md": file("out.md", "Setup") });
   assert.equal(alone["out.md"], "# Setup\n");
   await fails({ "index.md": file("out.md", "Setup", "# Setup", "", "text") }, /\/index\.md: the heading "Setup" repeats the title/);
+  await fails({ "index.md": file("out.md", "'**Setup**'", "# *Setup*") }, /the heading "\*\*Setup\*\*" repeats the title/);
   await fails({ "index.md": lines("---", "title: [a, b]", "render_to: out.md", "---", "") }, /\/index\.md: title must be one line of text/);
   await fails({ "index.md": lines("---", "title: ''", "render_to: out.md", "---", "") }, /title must be one line of text/);
   await fails({ "index.md": lines("---", "title: |", "  two", "  lines", "render_to: out.md", "---", "") }, /title must be one line of text/);
+  await fails({ "index.md": lines("---", 'title: "Top\\r# Next"', "render_to: out.md", "---", "") }, /title must be one line of text/);
+  const block = await run({ "index.md": lines("---", "title: |", "  Setup", "render_to: out.md", "---", "") });
+  assert.equal(block["out.md"], "# Setup\n");
 });
 
 test("every node with text needs a title, unless it is a part", async () => {
-  await fails({ "index.md": file("out.md", "T"), "a.md": "text\n" }, /\/a\.md: no title in the front matter; every node needs one/);
+  await fails({ "index.md": file("out.md", "T"), "a.md": "text\n" }, /\/a\.md: no title in the front matter; every file needs one/);
+  await fails({ "index.md": file("out.md", "T"), "a.md": lines("---", "title: ~", "---", "") }, /\/a\.md: no title in the front matter/);
   await fails({ "index.md": "# Nothing\n" }, /\/index\.md: no title in the front matter/);
   const out = await run({ "index.md": file("out.md", "T", '`holon render(node.at("./_a.md"))`'), "_a.md": "text\n" });
   assert.equal(out["out.md"], lines("# T", "", "text", ""));
@@ -180,31 +185,37 @@ test("parts are found by at() and are not children", async () => {
       "",
       '`holon render(node.at("./_note.md"))`',
       "",
-      '`holon render(node.at("./_bits/one.md"))`',
+      '`holon render(node.at("./_bits"))`',
       "",
       '`holon render(node.at("./tools/_tip.md"))`',
     ),
     "a.md": page("A"),
+    "my_file.md": page("Underscore inside"),
     "_note.md": page("Note", "", "A note."),
+    "_bits/index.md": page("Bits", '`holon node.children.map(render).join("\\n\\n")`'),
     "_bits/one.md": lines("# One", "", "Inside a part folder.", ""),
     "tools/_tip.md": "A folder with nothing but parts is no node.\n",
   });
   assert.equal(
     out["out.md"],
     lines(
-      "# Doc", "", "/a.md | /_bits/one.md", "", "## A", "", "## Note", "", "A note.", "",
-      "## One", "", "Inside a part folder.", "", "A folder with nothing but parts is no node.", "",
+      "# Doc", "", "/a.md /my_file.md | /_bits/one.md", "", "## A", "", "## Underscore inside", "", "## Note", "", "A note.", "",
+      "## Bits", "", "### One", "", "Inside a part folder.", "", "A folder with nothing but parts is no node.", "",
     ),
   );
 });
 
-test("a part cannot have render_to, and a part that nothing renders is an error", async () => {
+test("a part cannot have render_to, and a part whose text lands nowhere is an error", async () => {
   const index = file("out.md", "Doc");
   await fails({ "index.md": index, "_a.md": file("a.md", "A") }, /\/_a\.md: a part cannot have render_to/);
   await fails({ "index.md": index, "_a.md": "text\n" }, /\/_a\.md is a part that no function renders/);
   await fails({ "index.md": file("out.md", "Doc", '`holon node.at("./_a.md").path`'), "_a.md": "text\n" }, /\/_a\.md is a part that no function renders/);
   await fails({ "index.md": index, "_x/index.md": page("X") }, /\/_x\/index\.md is a part that no function renders/);
   await fails({ "index.md": index, "_x/y.md": "text\n" }, /\/_x\/y\.md is a part that no function renders/);
+  const dropped = '`holon (render(node.at("./_a.md")), "")`';
+  await fails({ "index.md": file("out.md", "Doc", dropped), "_a.md": "text\n" }, /\/_a\.md is a part whose text is in no file/);
+  const empty = await run({ "index.md": file("out.md", "Doc", dropped), "_a.md": "" });
+  assert.equal(empty["out.md"], "# Doc\n");
   const twice = '`holon render(node.at("./_n.md")) + "\\n\\n" + render(node.at("./_n.md"))`';
   await fails({ "index.md": file("out.md", "Doc", "[n](./_n.md)", "", twice), "_n.md": page("N") }, /\/_n\.md has no render_to and its text is in 2 places/);
 });
@@ -281,13 +292,13 @@ test("a link finds a node's own heading, even when titles repeat", async () => {
 test("a fragment names a heading of the node it belongs to", async () => {
   const out = await run({
     "holon.config.mjs": sections,
-    "index.md": file("out.md", "Doc", "", "[b](./b.md#details)", "", "`holon sections()`"),
+    "index.md": file("out.md", "Doc", "", "[b](./b.md#details) [a](./a.md#a)", "", "`holon sections()`"),
     "a.md": page("A", "", "# Details"),
     "b.md": page("B", "", "Jump to [details](#details).", "", "# Details"),
   });
   assert.equal(
     out["out.md"],
-    lines("# Doc", "", "[b](#details-1)", "", "## A", "", "### Details", "", "## B", "", "Jump to [details](#details-1).", "", "### Details", ""),
+    lines("# Doc", "", "[b](#details-1) [a](#a)", "", "## A", "", "### Details", "", "## B", "", "Jump to [details](#details-1).", "", "### Details", ""),
   );
 });
 
@@ -387,12 +398,21 @@ test("marker text in the source is only text", async () => {
 
 test("backlinks are the nodes whose text links here", async () => {
   const out = await run({
-    "index.md": file("out.md", "Doc", '`holon node.at("./c.md").backlinks.map((n) => n.path).join(", ")`'),
+    "index.md": file(
+      "out.md",
+      "Doc",
+      '`holon node.at("./c.md").backlinks.map((n) => n.path).join(", ")`',
+      "",
+      '`holon render(node.at("./_p.md"))`',
+      "",
+      '`holon render(node.at("./c.md"))`',
+    ),
     "a.md": page("A", "[c](./c.md) and [c again](./c.md)"),
     "b.md": page("B", "[c](/c.md)"),
     "c.md": page("C", "[self](./c.md)"),
+    "_p.md": "A part links to [c](./c.md) too.\n",
   });
-  assert.equal(out["out.md"], lines("# Doc", "", "/a.md, /b.md", ""));
+  assert.equal(out["out.md"], lines("# Doc", "", "/_p.md, /a.md, /b.md", "", "A part links to [c](#c) too.", "", "## C", "", "[self](#c)", ""));
 });
 
 test("GitHub Flavored Markdown passes through", async () => {
@@ -476,6 +496,23 @@ test("the essentials in docs/holon.config.mjs", async () => {
     ),
   );
   assert.equal(out["api.md"], lines("# API", "", "- [Guide](README.md#guide)", ""));
+});
+
+test("table() in docs/holon.config.mjs keeps every cell whole", async () => {
+  const out = await run({
+    "holon.config.mjs": readFileSync(new URL("../docs/holon.config.mjs", import.meta.url), "utf8"),
+    "index.md": file("README.md", "Docs", '`holon table("summary", "tags")`', "", "`holon sections()`"),
+    "a.md": lines("---", "title: A | B", "summary: |", "  left | right", "  next line", "tags: [x, y]", "---", ""),
+    "more/deep.md": page("Deep"),
+  });
+  assert.equal(
+    out["README.md"],
+    lines(
+      "# Docs", "",
+      "|  | summary | tags |", "| :-- | :-- | :-- |", "| [A \\| B](#a--b) | left \\| right next line | x,y |", "| more |  |  |", "",
+      "## A | B", "", "## Deep", "",
+    ),
+  );
 });
 
 test("README.md is compiled from docs/", async () => {

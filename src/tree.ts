@@ -158,8 +158,8 @@ function loadNode(tree: Tree, path: string, file: string | null, dir: string, ch
   const title = titleOf(meta, file);
   const first = headings(root)[0];
   if (title === null) {
-    if (file && !isPart(path)) throw new Error(`${file}: no title in the front matter; every node needs one, unless its name starts with _`);
-  } else if (first && plainText(first).trim() === title) {
+    if (file && !isPart(path)) throw new Error(`${file}: no title in the front matter; every file needs one, unless its name starts with _`);
+  } else if (first && plainText(first).trim() === plainText(parse(title)).trim()) {
     throw new Error(`${file}: the heading "${title}" repeats the title; Holon writes the title above the text`);
   }
   const artifact = renderTo(meta, file);
@@ -196,8 +196,9 @@ function splitFrontMatter(text: string, file: string | null): { meta: Record<str
 function titleOf(meta: Record<string, unknown>, file: string | null): string | null {
   const value = meta.title;
   if (value === undefined || value === null) return null;
-  if (typeof value !== "string" || value.trim() === "" || value.includes("\n")) throw new Error(`${file}: title must be one line of text`);
-  return value.trim();
+  const title = typeof value === "string" ? value.trim() : "";
+  if (title === "" || /[\r\n]/.test(title)) throw new Error(`${file}: title must be one line of text`);
+  return title;
 }
 
 function renderTo(meta: Record<string, unknown>, file: string | null): string | null {
