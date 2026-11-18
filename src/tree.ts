@@ -9,12 +9,12 @@ export type Node = {
   /** Path from the source folder: `/` for the root, `/guides` for a folder, `/guides/setup.md` for a file. */
   path: string;
   /** The front matter. */
-  meta: Record<string, unknown>;
+  meta: Record<string, unknown> & { order?: number };
   /** The `title` from the front matter, or null. */
   title: string | null;
   /** Output path from `render_to`, or null. */
   artifact: string | null;
-  /** The nodes in a folder, by name. Parts are not among them. */
+  /** Children sorted by `order` and name, with unordered nodes last. Names starting with `_` are excluded. */
   children: readonly Node[];
   /** Nodes whose text links to this node. */
   backlinks: readonly Node[];
@@ -148,12 +148,18 @@ function loadFolder(tree: Tree, path: string): Source[] {
     if (found[0]?.node.path === entryPath && !entry.name.startsWith("_")) children.push(found[0].node);
   }
   if (!index && children.length === 0) return inside;
+  children.sort((a, b) => {
+    const aOrder = a.meta.order ?? Infinity;
+    const bOrder = b.meta.order ?? Infinity;
+    return aOrder === bOrder ? 0 : aOrder - bOrder;
+  });
   return [loadNode(tree, path, index, path, children), ...inside];
 }
 
 function loadNode(tree: Tree, path: string, file: string | null, dir: string, children: Node[]): Source {
   const text = file ? readFileSync(join(tree.dir, file), "utf8").replace(/^﻿/, "").replace(/\r\n?/g, "\n") : "";
   const { meta, body, line } = splitFrontMatter(text, file);
+  validateOrder(meta, file);
   const root = parse(body);
   const title = titleOf(meta, file);
   const first = headings(root)[0];
@@ -208,4 +214,11 @@ function renderTo(meta: Record<string, unknown>, file: string | null): string | 
     throw new Error(`${file}: render_to must be a file path with forward slashes, like guides/setup.md`);
   }
   return posix.normalize(value);
+}
+
+function validateOrder(meta: Record<string, unknown>, file: string | null): asserts meta is Node["meta"] {
+  const order = meta.order;
+  if (order !== undefined && (typeof order !== "number" || !Number.isFinite(order))) {
+    throw new Error(`${file}: order must be a finite number`);
+  }
 }

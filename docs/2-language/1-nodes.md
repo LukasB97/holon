@@ -12,11 +12,13 @@ A node is plain data:
 | `path` | Path from the source folder: `/guides/setup.md`, or `/guides` for a folder |
 | `meta` | The front matter |
 | `title` | The `title` from the front matter, or `null` |
-| `children` | The nodes in the folder, sorted by name, except those named with a leading `_` |
+| `children` | The nodes in the folder, sorted by `order` and name, except those named with a leading `_` |
 | `artifact` | The node's own output file from `render_to`, or `null` |
 | `backlinks` | The nodes whose text links to this node |
 | `at(path)` | The node at a path relative to this node's file, or from the source folder with a leading `/` |
 
 The title names the node. Every `.md` file has one in its front matter, unless it is a part. A name starting with `_` makes a node and everything inside it a part: text that belongs to the places that use it, not to the tree. A part is not among its folder's `children`, so a function that walks the tree never meets it. `at()` finds it, a part folder lists what is inside it as its `children`, and a part appears only where a function renders it. A part has no `render_to`, and a part whose text ends up in no file is an error, so no text lies around unused.
 
-Front matter other than `title` and `render_to` means nothing to Holon. It is there for your functions to read.
+A file can set `order` in its front matter, and a folder can set it in its `index.md`. Children with an `order` come first, lowest number first. Children with the same number or with no `order` are sorted by name. The field affects a node's position only in its parent's `children`. When present, `order` must be a finite number, such as `order: 10`. An empty value or a quoted number fails the build.
+
+Your functions can read any additional front matter fields.

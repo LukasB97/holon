@@ -173,6 +173,30 @@ test("nodes expose path, meta, title, children and at()", async () => {
   await fails({ "index.md": file("out.md", "Root", '`holon node.at("./nope.md").path`') }, /at\("\.\/nope\.md"\) matches no/);
 });
 
+test("children with an order come first, with names breaking ties", async () => {
+  const out = await run({
+    "holon.config.mjs": sections,
+    "index.md": file("out.md", "Root", '`holon sections()`'),
+    "a.md": page("Unordered A"),
+    "b.md": page("Unordered B"),
+    "c.md": lines(...front({ title: "Two C", order: "2" }), ""),
+    "d/index.md": lines(...front({ title: "Two D", order: "2" }), ""),
+    "e.md": lines(...front({ title: "Ten", order: "10" }), ""),
+    "f.md": lines(...front({ title: "Fraction", order: "1.5" }), ""),
+    "y.md": lines(...front({ title: "Negative", order: "-1" }), ""),
+    "z.md": lines(...front({ title: "Zero", order: "0" }), ""),
+  });
+  assert.equal(
+    out["out.md"],
+    lines("# Root", "", "## Negative", "", "## Zero", "", "## Fraction", "", "## Two C", "", "## Two D", "", "## Ten", "", "## Unordered A", "", "## Unordered B", ""),
+  );
+
+  for (const order of ['"2"', ".inf", ".nan", ""]) {
+    await fails({ "a.md": lines(...front({ title: "A", order }), "") }, /\/a\.md: order must be a finite number/);
+  }
+  await fails({ "a/index.md": lines(...front({ title: "A", order: "false" }), "") }, /\/a\/index\.md: order must be a finite number/);
+});
+
 test("parts are found by at() and are not children", async () => {
   const out = await run({
     "holon.config.mjs": sections,
@@ -194,13 +218,14 @@ test("parts are found by at() and are not children", async () => {
     "_note.md": page("Note", "", "A note."),
     "_bits/index.md": page("Bits", '`holon node.children.map(render).join("\\n\\n")`'),
     "_bits/one.md": lines("# One", "", "Inside a part folder.", ""),
+    "_bits/two.md": lines("---", "order: 1", "---", "# Two", ""),
     "tools/_tip.md": "A folder with nothing but parts is no node.\n",
   });
   assert.equal(
     out["out.md"],
     lines(
-      "# Doc", "", "/a.md /my_file.md | /_bits/one.md", "", "## A", "", "## Underscore inside", "", "## Note", "", "A note.", "",
-      "## Bits", "", "### One", "", "Inside a part folder.", "", "A folder with nothing but parts is no node.", "",
+      "# Doc", "", "/a.md /my_file.md | /_bits/two.md /_bits/one.md", "", "## A", "", "## Underscore inside", "", "## Note", "", "A note.", "",
+      "## Bits", "", "### Two", "", "### One", "", "Inside a part folder.", "", "A folder with nothing but parts is no node.", "",
     ),
   );
 });
